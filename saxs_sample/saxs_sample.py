@@ -3,17 +3,35 @@ import matplotlib.pyplot as plt
 import scipy.optimize as opt
 import numpy as np
 
-class saxs_sample:
+class Saxs_Sample:
     '''
     Takes in a Grad file
     Returns a saxs sample.
 
-    Filename: str, the file path. Should end in .grad
-    name: str, name of the sample
-    qw, qm, qs, qes: [float, float], the q-ranges for your different scattering types.
+    infile : str
+        The file path to the .grad input file.
+    name : str
+        The name attached to the Saxs_Sample object. This is mostly for the user's own clarity.
+    qbounds : dict
+        q cutoffs for the waxs, maxs, saxs, and esaxs settings, in inverse A.
+
+        Default is {'waxs': [0, 5], 'maxs': [0, 5], 'saxs': [0, 5], 'esaxs': [0, 5]}, i.e., no q cutoff.
+    savefile : str
+        The filepath to the csv file. savefile should not need to end in '.csv'. That is applied automatically.
+    modelfile : str
+        The filepath to the input model file. This should be a csv file. The program was designed to accept sasView-generated csv files.
+    thickness : float
+        The sample thickness in cm. If thickness is provided, the scattering will be divided by thickness, putting the scattering in absolute scale.
     '''
-    def __init__(self, file, name, qbounds, background = None, save_to_file = None, model_file = None, thickness = None):
-        self.file = file
+    def __init__(self,
+                 infile,
+                 name,
+                 qbounds = {'waxs': [0, 5], 'maxs': [0, 5], 'saxs': [0, 5], 'esaxs': [0, 5]},
+                 background = None,
+                 savetofile = None,
+                 modelfile = None,
+                 thickness = None):
+        self.infile = infile
         self.name = name
         self.qbounds = qbounds
 
