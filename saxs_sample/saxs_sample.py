@@ -27,21 +27,21 @@ class Saxs_Sample:
                  name,
                  qbounds = {'waxs': [0, 5], 'maxs': [0, 5], 'saxs': [0, 5], 'esaxs': [0, 5]},
                  background = None,
-                 savetofile = None,
-                 modelfile = None,
+                 save_to_file = None,
+                 model_infile = None,
                  thickness = None):
         self.infile = infile
         self.name = name
         self.qbounds = qbounds
 
-        self.raw = self.open(file)
+        self.raw = self.open(self.infile)
         self.cleaned = self.clean()
         self.waxs, self.maxs, self.saxs, self.esaxs = self.get_types()
         self.bck = background
         self.thickness = thickness
 
         if not background is None:
-            if not type(self.bck) is saxs_sample:
+            if not type(self.bck) is Saxs_Sample:
                 raise TypeError('Background passed to sub is not a saxs_sample object!')
             self.waxs_s, self.maxs_s, self.saxs_s, self.esaxs_s = self.sub()
 
@@ -53,8 +53,8 @@ class Saxs_Sample:
             self.uni['I'] = self.uni['I']/self.thickness
             # self.uni = self.uni['dI']/self.thickness
 
-        if model_file is not None:
-            self.model = self.get_model(model_file)
+        if model_infile is not None:
+            self.model = self.get_model(model_infile)
 
         if save_to_file is not None:
             self.uni.to_csv(save_to_file + '.csv', index = False)
@@ -83,9 +83,9 @@ class Saxs_Sample:
             lines = infile.readlines()
         return lines
 
-    def get_model(self, model_file):
+    def get_model(self, model_infile):
         lines = []
-        with open(model_file, 'r') as openfile:
+        with open(model_infile, 'r') as openfile:
             lines = openfile.readlines()
 
         del (lines[0])
@@ -134,7 +134,8 @@ class Saxs_Sample:
             #if
             qmax = type.iloc[-1,0]
             if qmax > 1.5: #if waxs:
-                filter1 = (type['q'] > self.qbounds['waxs'][0])
+                print(self.qbounds['waxs'][0])
+                filter1 = type['q'] > self.qbounds['waxs'][0]
                 filter2 = type['q'] < self.qbounds['waxs'][1]
                 waxs = type.where(filter1 & filter2)
 
@@ -203,7 +204,7 @@ class Saxs_Sample:
         bck = a saxs_sample object.
         """
 
-        if not type(self.bck) is saxs_sample:
+        if not type(self.bck) is Saxs_Sample:
             raise TypeError('background passed to sub is not a saxs_sample object!')
 
         c = 1 #simple subtraction
@@ -248,7 +249,7 @@ class Saxs_Sample:
         return waxs_sub, maxs_sub, saxs_sub, esaxs_sub
 
     def complex_sub(self):
-        if not type(self.bck) is saxs_sample:
+        if not type(self.bck) is Saxs_Sample:
             raise TypeError('background passed to sub is not a saxs_sample object!')
 
 
