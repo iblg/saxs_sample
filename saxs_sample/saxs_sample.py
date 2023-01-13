@@ -327,13 +327,3 @@ def resid(c, sc, bck):
 # def f(c, samp, bck):
 #     resid = np.sqrt(np.sum((samp - c * bck)**2))
 #     return resid
-
-def main():
-    qbounds = {'waxs': [0.06, 5], 'maxs': [0.035, 0.2], 'saxs': [0, 0], 'esaxs': [0.0, 0.04]}
-    kapton = saxs_sample('/Users/ianbillinge/Documents/yiplab/projects/saxs_amine/2022-12-09_kinnari/from_import/kapton.grad', 'kapton', qbounds)
-    dipa05 = saxs_sample('/Users/ianbillinge/Documents/yiplab/projects/saxs_amine/2022-12-09_kinnari/from_import/sds_s4.grad', 'dipa05', qbounds, thickness = 0.2, background = kapton)
-
-    return
-
-if __name__ == '__main__':
-    main()
