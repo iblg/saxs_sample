@@ -5,8 +5,7 @@ import numpy as np
 
 class Saxs_Sample:
     '''
-    Takes in a Grad file
-    Returns a saxs sample.
+    Takes in a Grad file. Returns a saxs sample object.
 
     infile : str
         The file path to the .grad input file.
