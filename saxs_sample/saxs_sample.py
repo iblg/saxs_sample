@@ -134,7 +134,7 @@ class Saxs_Sample:
             #if
             qmax = type.iloc[-1,0]
             if qmax > 1.5: #if waxs:
-                print(self.qbounds['waxs'][0])
+                # print(self.qbounds['waxs'][0])
                 filter1 = type['q'] > self.qbounds['waxs'][0]
                 filter2 = type['q'] < self.qbounds['waxs'][1]
                 waxs = type.where(filter1 & filter2)
@@ -215,7 +215,7 @@ class Saxs_Sample:
             waxs_sub['I'] = self.waxs['I'] - c * self.bck.waxs['I']
             waxs_sub['dI'] = self.waxs['dI'] + c * self.bck.waxs['dI']
         except KeyError as ke:
-            print('No waxs in saxs_sample.sub()')
+            # print('No waxs in saxs_sample.sub()')
 
 
         try:
@@ -225,7 +225,7 @@ class Saxs_Sample:
             maxs_sub['dI'] = self.maxs['dI'] + c * self.bck.maxs['dI']
         except KeyError as ke:
             maxs_sub = pd.DataFrame()
-            print('No maxs in saxs_sample.sub()')
+            # print('No maxs in saxs_sample.sub()')
 
         try:
             saxs_sub = pd.DataFrame()
@@ -234,7 +234,7 @@ class Saxs_Sample:
             saxs_sub['dI'] = self.saxs['dI'] + c * self.bck.saxs['dI']
         except KeyError as ke:
             saxs_sub = pd.DataFrame()
-            print('No saxs in saxs_sample.sub()')
+            # print('No saxs in saxs_sample.sub()')
 
         try:
             esaxs_sub = pd.DataFrame()
@@ -243,7 +243,7 @@ class Saxs_Sample:
             esaxs_sub['dI'] = self.esaxs['dI'] + c * self.bck.esaxs['dI']
         except KeyError as ke:
             esaxs_sub = pd.DataFrame()
-            print('No esaxs in saxs_sample.sub()')
+            # print('No esaxs in saxs_sample.sub()')
 
         # return
         return waxs_sub, maxs_sub, saxs_sub, esaxs_sub
@@ -257,44 +257,44 @@ class Saxs_Sample:
 
         try:
             c = opt.minimize(resid, 100, args = (self.waxs.I, self.bck.waxs.I)).fun
-            print('waxs_sub: {}'.format(c))
+            # print('waxs_sub: {}'.format(c))
             waxs_sub['q'] = self.waxs['q']
             waxs_sub['I'] = self.waxs['I'] - c * self.bck.waxs['I']
             waxs_sub['dI'] = self.waxs['dI'] + c * self.bck.waxs['dI']
         except KeyError as ke:
-            print('No waxs in saxs_sample.sub()')
+            # print('No waxs in saxs_sample.sub()')
 
         try:
             c = opt.minimize(resid, 100, args = (self.maxs['I'], self.bck.maxs['I'])).fun
-            print('maxs_sub: {}'.format(c))
+            # print('maxs_sub: {}'.format(c))
             maxs_sub['q'] = self.maxs['q']
             maxs_sub['I'] = self.maxs['I'] - c * self.bck.maxs['I']
             maxs_sub['dI'] = self.maxs['dI'] + c * self.bck.maxs['dI']
         except KeyError as ke:
             maxs_sub = pd.DataFrame()
-            print('No maxs in saxs_sample.sub()')
+            # print('No maxs in saxs_sample.sub()')
 
         try:
             c = opt.minimize(resid, 100, args = (self.saxs['I'], self.bck.saxs['I'])).fun
-            print('saxs_sub: {}'.format(c))
+            # print('saxs_sub: {}'.format(c))
 
             saxs_sub['q'] = self.saxs['q']
             saxs_sub['I'] = self.saxs['I'] - c * self.bck.saxs['I']
             saxs_sub['dI'] = self.saxs['dI'] + c * self.bck.saxs['dI']
         except KeyError as ke:
             saxs_sub = pd.DataFrame()
-            print('No saxs in saxs_sample.sub()')
+            # print('No saxs in saxs_sample.sub()')
 
         try:
             c = opt.minimize(resid, 100, args = (self.esaxs['I'], self.bck.esaxs['I'])).fun
-            print('esaxs_sub: {}'.format(c))
+            # print('esaxs_sub: {}'.format(c))
 
             esaxs_sub['q'] = self.esaxs['q']
             esaxs_sub['I'] = self.esaxs['I'] - c * self.bck.esaxs['I']
             esaxs_sub['dI'] = self.esaxs['dI'] + c * self.bck.esaxs['dI']
         except KeyError as ke:
             esaxs_sub = pd.DataFrame()
-            print('No esaxs in saxs_sample.sub()')
+            # print('No esaxs in saxs_sample.sub()')
 
         uni = pd.concat([waxs_sub, maxs_sub, saxs_sub, esaxs_sub], ignore_index=True)
         uni = uni.sort_values(by=['q']).dropna()
