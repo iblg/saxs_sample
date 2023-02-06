@@ -225,6 +225,7 @@ class Saxs_Sample:
             maxs_sub['dI'] = self.maxs['dI'] + c * self.bck.maxs['dI']
         except KeyError as ke:
             maxs_sub = pd.DataFrame()
+            print(ke)
             # print('No maxs in saxs_sample.sub()')
 
         try:
@@ -234,6 +235,7 @@ class Saxs_Sample:
             saxs_sub['dI'] = self.saxs['dI'] + c * self.bck.saxs['dI']
         except KeyError as ke:
             saxs_sub = pd.DataFrame()
+            print(ke)
             # print('No saxs in saxs_sample.sub()')
 
         try:
@@ -242,6 +244,7 @@ class Saxs_Sample:
             esaxs_sub['I'] = self.esaxs['I'] - c * self.bck.esaxs['I']
             esaxs_sub['dI'] = self.esaxs['dI'] + c * self.bck.esaxs['dI']
         except KeyError as ke:
+            print(ke)
             esaxs_sub = pd.DataFrame()
             # print('No esaxs in saxs_sample.sub()')
 
