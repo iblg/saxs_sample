@@ -266,6 +266,7 @@ class Saxs_Sample:
             waxs_sub['I'] = self.waxs['I'] - c * self.bck.waxs['I']
             waxs_sub['dI'] = self.waxs['dI'] + c * self.bck.waxs['dI']
         except KeyError as ke:
+            waxs_sub = pd.DataFrame()
             # print('No waxs in saxs_sample.sub()')
 
         try:
@@ -276,6 +277,7 @@ class Saxs_Sample:
             maxs_sub['dI'] = self.maxs['dI'] + c * self.bck.maxs['dI']
         except KeyError as ke:
             maxs_sub = pd.DataFrame()
+
             # print('No maxs in saxs_sample.sub()')
 
         try:
