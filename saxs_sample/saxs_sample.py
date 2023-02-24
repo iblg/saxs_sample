@@ -421,18 +421,19 @@ def f(c, samp, bck):
     return resid
 
 def main():
-    fp = '/Users/ianbillinge/Documents/yiplab/projects/saxs_amine/linkam/2023-02-23-dipa/from_import/ramp_up/25.grad'
-    qbounds = {'waxs': [0.0, 5], 'maxs': [0.0, 5], 'saxs': [0, 5], 'esaxs': [0.0, 5]}
-    samp = Saxs_Sample(fp,
-                    '25',
-                    qbounds,
-                    save_to_file = None,
-                    background = None,
-                    stitch_params = {'maxs':[0.06, 0.08], 'esaxs': [0.03, 0.04]}
-                    ) #try with kapton subtraction
-    # print(samp.waxs)
+    # fp = '/Users/ianbillinge/Documents/yiplab/projects/saxs_amine/linkam/2023-02-23-dipa/from_import/ramp_up/25.grad'
+    # qbounds = {'waxs': [0.0, 5], 'maxs': [0.0, 5], 'saxs': [0, 5], 'esaxs': [0.0, 5]}
+    # samp = Saxs_Sample(fp,
+    #                 '25',
+    #                 qbounds,
+    #                 save_to_file = None,
+    #                 background = None,
+    #                 stitch_params = {'maxs':[0.06, 0.08], 'esaxs': [0.03, 0.04]}
+    #                 ) #try with kapton subtraction
+    # # print(samp.waxs)
 
-    samp.plot()
+    # samp.plot()
+    pass
     return
 
 if __name__ == '__main__':
