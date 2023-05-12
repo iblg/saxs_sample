@@ -21,6 +21,8 @@ class Saxs_Sample:
         The filepath to the input model file. This should be a csv file. The program was designed to accept sasView-generated csv files.
     thickness : float
         The sample thickness in cm. If thickness is provided, the scattering will be divided by thickness, putting the scattering in absolute scale.
+    stitch_params : dict, default None
+        If true, the sample will be arbitratily stitched together.
     '''
     def __init__(self,
                  infile,
@@ -29,7 +31,8 @@ class Saxs_Sample:
                  background = None,
                  save_to_file = None,
                  model_infile = None,
-                 thickness = None):
+                 thickness = None,
+                 stitch_params = None):
         self.infile = infile
         self.name = name
         self.qbounds = qbounds
@@ -39,10 +42,12 @@ class Saxs_Sample:
         self.waxs, self.maxs, self.saxs, self.esaxs = self.get_types()
         self.bck = background
         self.thickness = thickness
+        self.stitch_params = stitch_params
 
         if not background is None:
             if not type(self.bck) is Saxs_Sample:
                 raise TypeError('Background passed to sub is not a saxs_sample object!')
+
             self.waxs_s, self.maxs_s, self.saxs_s, self.esaxs_s = self.sub()
 
         self.uni = self.unify()
@@ -69,14 +74,86 @@ class Saxs_Sample:
     def unify(self):
         """This should return a single dataframe per sample which is easier to plot."""
         uni = pd.DataFrame(columns = self.waxs.columns)
-        if self.bck == None:
-            uni = pd.concat([self.waxs, self.maxs, self.saxs, self.esaxs], ignore_index = True)
-        else:
-            uni = pd.concat([self.waxs_s, self.maxs_s, self.saxs_s, self.esaxs_s], ignore_index = True)
 
+        if not self.stitch_params == None:
+            factors = self.get_multiplicative_factors()
+        else:
+            factors = [1, 1, 1, 1]
+
+        if self.bck == None:
+            waxs, maxs, saxs, esaxs = self.waxs, self.maxs, self.saxs, self.esaxs
+            # uni = pd.concat([self.waxs * factors[0], self.maxs * factors[1], self.saxs * factors[2], self.esaxs * factors[3]], ignore_index = True)
+        else:
+            waxs, maxs, saxs, esaxs = self.waxs_s, self.maxs_s, self.saxs_s, self.esaxs_s
+        types = [waxs, maxs, saxs, esaxs]
+
+        for f, t in zip(factors, types):
+            print(t.columns)
+            try:
+                t['I'], t['dI'] = f * t['I'], f * t['dI']
+            except KeyError as ke:
+                print(ke)
+            # uni = pd.concat([self.waxs_s * factors[0], self.maxs_s * factors[1], self.saxs_s * factors[2], self.esaxs_s * factors[3]], ignore_index = True)
+
+        uni = pd.concat([waxs, maxs, saxs, esaxs], ignore_index = True)
         uni = uni.sort_values(by = ['q'])
         uni = uni.dropna()
         return uni
+
+    def get_multiplicative_factors(self):
+        """
+
+        """
+        if isinstance(self.stitch_params, dict):
+            pass
+        else:
+            print('self.stitch_params must either be None or a dict!')
+
+        if self.bck == None:
+            #stitch together maxs etc
+            waxs, maxs, saxs, esaxs = self.waxs, self.maxs, self.saxs, self.esaxs
+        else:
+            waxs, maxs, saxs, esaxs = self.waxs_s, self.maxs_s, self.saxs_s, self.esaxs_s
+        factors = [1, 1, 1, 1]
+        #Do the MAXS/WAXS stitching
+        try:
+            waxs_comp = waxs.where((waxs['q'] > self.stitch_params['maxs'][0]) & (waxs['q'] < self.stitch_params['maxs'][1])).dropna()
+            maxs_comp = maxs.where((maxs['q'] > self.stitch_params['maxs'][0]) & (maxs['q'] < self.stitch_params['maxs'][1])).dropna()
+            print('In maxs/saxs bridging')
+            print(waxs_comp)
+            print(maxs_comp)
+            mca = waxs_comp['I'].mean()/maxs_comp['I'].mean()
+            # maxs['I'], maxs['dI'] = mca * maxs['I'], mca * maxs['dI']
+            factors[1] = mca
+        except KeyError as ke:
+            mca = 1
+            print(ke)
+
+
+        #Do the SAXS/MAXS stitching
+        try:
+            maxs_comp = maxs.where((maxs['q'] > self.stitch_params['saxs'][0]) & (maxs['q'] < self.stitch_params['saxs'][1])).dropna()
+            saxs_comp = saxs.where((saxs['q'] > self.stitch_params['saxs'][0]) & (saxs['q'] < self.stitch_params['saxs'][1])).dropna()
+            sca = maxs_comp['I'].mean()/saxs_comp['I'].mean()
+            # saxs['I'], saxs['dI'] = sca * saxs['I'], sca * saxs['dI']
+            factors[2] = sca * mca
+        except KeyError as ke:
+            sca = 1
+            print(ke)
+
+        #Do the ESAXS/MAXS stitching
+        try:
+            maxs_comp = maxs.where((maxs['q'] > self.stitch_params['esaxs'][0]) & (maxs['q'] < self.stitch_params['esaxs'][1])).dropna()
+            esaxs_comp = esaxs.where((esaxs['q'] > self.stitch_params['esaxs'][0]) & (esaxs['q'] < self.stitch_params['esaxs'][1])).dropna()
+            eca = maxs_comp['I'].mean()/esaxs_comp['I'].mean()
+            # esaxs['I'], esaxs['dI'] = eca * esaxs['I'], eca * esaxs['dI']
+            factors[3] = eca * mca * sca
+        except KeyError as ke:
+            eca = 1
+            print(ke)
+
+
+        return factors
 
     def open(self, filename):
         with open(filename, 'r') as infile:
@@ -310,26 +387,54 @@ class Saxs_Sample:
 #
 def resid(c, sc, bck):
     '''
+    c : float
+    A scalar
+
+    sc : numpy.array or similar
+    The scattering data.
+
+    bck : np.array or similar
+    The background scattering data.
+
     The target function to minimize. Takes sc, some scattering data, bck, some background data, and c, a scalar.
     '''
     return np.sum((sc - c * bck)**2)
-#
-# def get_c(data):
-#     '''
-#     Adds a column to the data which is the appropriate scaling factor for the background subtraction.
-#     '''
-#     sub_data = {}
-#
-#     for key, val in data.items():
-#         c = sub_bck(val[:,1], data['empty'][:,1])['x'][0]
-#         sub = val[:,1:2] - data['empty'][:,1:2] * c
-#
-#         sub_data[key] = np.append(val, sub, axis = 1)
-#
-#
-#
-#     return sub_data
-#
-# def f(c, samp, bck):
-#     resid = np.sqrt(np.sum((samp - c * bck)**2))
-#     return resid
+
+def get_c(data):
+    '''
+    Adds a column to the data which is the appropriate scaling factor for the background subtraction.
+    '''
+    sub_data = {}
+
+    for key, val in data.items():
+        c = sub_bck(val[:,1], data['empty'][:,1])['x'][0]
+        sub = val[:,1:2] - data['empty'][:,1:2] * c
+
+        sub_data[key] = np.append(val, sub, axis = 1)
+
+
+
+    return sub_data
+
+def f(c, samp, bck):
+    resid = np.sqrt(np.sum((samp - c * bck)**2))
+    return resid
+
+def main():
+    # fp = '/Users/ianbillinge/Documents/yiplab/projects/saxs_amine/linkam/2023-02-23-dipa/from_import/ramp_up/25.grad'
+    # qbounds = {'waxs': [0.0, 5], 'maxs': [0.0, 5], 'saxs': [0, 5], 'esaxs': [0.0, 5]}
+    # samp = Saxs_Sample(fp,
+    #                 '25',
+    #                 qbounds,
+    #                 save_to_file = None,
+    #                 background = None,
+    #                 stitch_params = {'maxs':[0.06, 0.08], 'esaxs': [0.03, 0.04]}
+    #                 ) #try with kapton subtraction
+    # # print(samp.waxs)
+
+    # samp.plot()
+    pass
+    return
+
+if __name__ == '__main__':
+    main()
