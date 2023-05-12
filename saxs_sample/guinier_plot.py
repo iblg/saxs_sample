@@ -26,24 +26,3 @@ def guinier_plot(*samples, display=False, savefig=False, legend=True,qbounds=[0,
         plt.savefig(savefig)
 
     return fig, ax
-
-
-def main():
-    name = 'dpa03'
-    filename = '/Users/ianbillinge/Documents/yiplab/projects/saxs_amine/2023-05-09-dpa/from_import/' + name + '.grad'
-    stf = '/Users/ianbillinge/Documents/yiplab/projects/saxs_amine/2023-05-09-dpa/csvs/' + name
-
-    qbounds = {'waxs': [0.055, 5], 'maxs': [0.0, 5], 'saxs': [0, 5], 'esaxs': [0.0, 0.05]}
-
-    dpa03 = Saxs_Sample(filename, name, qbounds,
-                        # background=kapton,
-                        thickness=0.2,
-                        save_to_file=stf)
-
-    guinier_plot(dpa03, display=True, qbounds=[0,0.02])
-
-    return
-
-
-if __name__ == '__main__':
-    main()
