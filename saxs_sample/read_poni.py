@@ -1,5 +1,3 @@
-
-
 def read_poni(fp):
     with open(fp, 'r') as infile:
         lines = infile.readlines()

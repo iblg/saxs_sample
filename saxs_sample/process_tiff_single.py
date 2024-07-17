@@ -7,28 +7,30 @@ import glob
 from saxs_sample.read_poni import read_poni
 from pathlib import Path
 import json
+import xarray as xr
 
-
-def get_det_distance(fp=None):
+from pathlib import Path
+def get_poni_params(fp=None):
     """
     :param fp: Filepath to poni file
     :return: detector distance in mm
     """
 
     params = read_poni(fp)
-    det_distance = params['Distance']
 
-    return det_distance
+    return params
 
 
-def read_metadata(folder):
+def read_metadata(folder, metadata_kwargs):
     """
     :param folder: Folder to search for metadata .txt file
     :return: dict full of metadata
     """
-    file = next(folder.rglob('*.txt'))
-    with open(file, 'r') as infile:
-        md = infile.readlines()
+    txt_files = folder.glob('*.txt')
+
+    for file in txt_files:
+        with open(file, 'r') as infile:
+            md = infile.readlines()
 
     md = [line.strip()[2:] for line in md]
     md = [line for line in md if '<' not in line]
@@ -45,9 +47,13 @@ def read_metadata(folder):
             pass
         except TypeError as te:
             pass
+
+    if metadata_kwargs is None:
+        pass
+    else:
+        for key, val in metadata_kwargs.items():
+            md[key] = val
     return md
-
-
 
 
 def process_tiff_single(
@@ -66,12 +72,15 @@ def process_tiff_single(
         beamstop_y=241.60,
         wvl = 1.5418e-10,
         print_metadata=False,
+        plot_total_image=False,
+        metadata_kwargs:dict = None,
+        img_to_append='total'
 ):
-    metadata = read_metadata(folder_with_frames)
+    metadata = read_metadata(folder_with_frames, metadata_kwargs)
 
     if print_metadata:
         print(metadata['Meas.Description'])
-        print(**metadata)
+        print(metadata)
 
     # beamstop_y = kwargs.get('beamstop_y', 241.60)
     # bmstp_x = 364.21;  # pixel units
@@ -108,22 +117,26 @@ def process_tiff_single(
     # %% Set up the aximuthal integrator object
 
     # Experimental detector info
-    det_distance = get_det_distance(poni_fp)
+    poni_params = get_poni_params(poni_fp)
+    det_distance = poni_params['Distance']
+    poni1 = poni_params['Poni1']
+    poni2 = poni_params['Poni2']
+    # poni1 = poni_params[]
     # det_distance = (180.2378 - 12.5) * 1e-3;  # WAXS conformation, meters
     bmstp_x = 364.21  # pixel units
     bmstp_y = 241.60  # pixel units
     # wvl = 1.5418e-10  # Ang
 
     # Create object (this al)
-    ai = AI(dist=det_distance, detector=dtr, poni1=bmstp_x * dx_pixel, poni2=bmstp_y * dy_pixel, wavelength=wvl)
+    ai = AI(dist=det_distance, detector=dtr, poni1=poni1, poni2=poni2, wavelength=wvl)
 
     # Choose resolution for integration in q space
     q_res = int(399)  # number of bins
 
-    frame_rate = 3  # seconds, fixed in the implementation
-    n_frame = int(100)  # Choose the number of frames to average
+    # frame_rate = 3  # seconds, fixed in the implementation
+    # n_frame = int(100)  # Choose the number of frames to average
     # n_frame = int(1)  # Choose the number of frames to average
-    period = frame_rate * n_frame  # seconds
+    # period = frame_rate * n_frame  # seconds
 
     # %% Load .tiff name indicated by exposure number
 
@@ -136,26 +149,38 @@ def process_tiff_single(
     # Get all frames corresponding to that exposure
     pn_list = folder_with_frames.rglob('fr_0{:d}_*.tiff'.format(tiff_num))
     # Open all of the images in that list
-    for i in pn_list:
-        img_array.append(fabio.open(i).data)
+    # for i in pn_list:
+        # img_array.append(fabio.open(i).data)
+
+    img_array = [fabio.open(i).data for i in pn_list]
+
 
     # %% Create average images for the desired time period
 
     # List of image numbers
-    img_list = np.arange(n_frame - 1, len(img_array), n_frame, dtype=int)
+    # img_list = np.arange(n_frame - 1, len(img_array), n_frame, dtype=int)
 
     # Array of averaged images
     img_av = []
     print('image array shape:', len(img_array))
     # Set average image to zero
     av_img = np.zeros_like(img_array[0], dtype=float)
+    total_image = av_img.copy()
 
     # Take average of indicated images
     for i in range(0, len(img_array)):
         av_img += img_array[i] / len(img_array)
+        total_image += img_array[i]
 
-    # Append result to total
+
     img_av.append(av_img)
+
+    if plot_total_image:
+        fig, ax = plt.subplots()
+        picture = ax.imshow(total_image, cmap='viridis', vmin=0, vmax=total_image.max())
+        fig.colorbar(picture)
+        plt.show()
+        plt.close()
 
     # %% Initialize some empty lists
 
@@ -175,13 +200,16 @@ def process_tiff_single(
         dI.append(res[2])
 
     # %% Save results in .csv with information about the frame rate
-    q = pd.Series(np.array(q[0]) / 10., name='q') # correcting from inverse nm to inverse A
+
+    q = pd.Series(np.array(q[0]), name='q')
+    q = q / 10. # correcting from inverse nm to inverse A
     I = pd.Series(np.array(I[0]), name='I')
     dI = pd.Series(np.array(dI[0]), name='dI')
 
     df = pd.concat([q,I, dI], axis='columns')
+    df = df[['q', 'I', 'dI']]
     outfile = Path(outfile).resolve()
-    df.to_csv(outfile)
+    df.to_csv(outfile, index=False)
     jsonfile = outfile.with_suffix('.json')
 
     with open(jsonfile, 'w') as json_file:
@@ -189,6 +217,45 @@ def process_tiff_single(
 
     return
 
+def get_abs_intensity_from_rel_intensity(sample, out_dir = None, verbose=True):
+    """
 
-if __name__ == '__main__':
-    main()
+    :param path: pathlib.Path. Should match the stem or sample name, so that the 1d data, written as a csv file, is in the same directory as the metadata, a json file.
+    :return:
+
+    """
+    if out_dir is None:
+        out_dir = sample.resolve().parent
+    else:
+        pass
+
+    data = pd.read_csv(sample.with_suffix('.csv'))
+    with open(sample.with_suffix('.json'), 'r') as infile:
+        metadata = json.load(infile)
+    # metadata = json.load(str(sample.with_suffix('.json')))
+
+    t = float(metadata['livetime'])
+    T = float(metadata['sample_transfact'])
+    I0 = float(metadata['saxsconf_Izero'])
+    Ieff = float(metadata['saxsconf_Ieff'])
+
+    # check that necessary stuff is there
+    if verbose:
+        print('Normalizing by measurement time, sample transmission, and I0 for sample {}'.format(sample.stem))
+        print('Measurement time: {}'.format(t))
+        print('Transmission factor: {}'.format(T))
+        print('I0: {}'.format(I0))
+        print('Ieff: {}'.format(Ieff))
+        print('Further normalization by 10**6 performed (unknown reason why, contact Ian for more details)')
+
+
+    # data['I_rel'] = data['I']
+    data['I'] = data['I'] / (t * T * (I0/10**6) * 10 * Ieff)
+    data['dI'] = data['dI'] / (t * T * (I0/10**6) * 10 * Ieff)
+    # data['I'] = data['I'] / (t * T * (I0))
+    data = data[['q', 'I', 'dI']]
+
+    # for some reason the .grad normalization requires dividing by t * T * I0/10**6
+    # but the processing when done by me requires that times ten.
+    data.to_csv((out_dir / sample.stem).with_suffix('.csv'), index=False)
+    return

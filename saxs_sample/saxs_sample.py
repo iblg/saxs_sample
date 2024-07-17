@@ -21,6 +21,8 @@ class Saxs_Sample:
                  water_intensity_calibrant=None,  # should be a saxs_sample object
                  verbose_flag=False,
                  image_numbers = None,
+                 manually_correct_transmission=None,
+                 manually_correct_I0=None,
                  ):
         """
 
@@ -48,6 +50,13 @@ class Saxs_Sample:
         self.water_intensity_calibrant = water_intensity_calibrant
         self.image_numbers = image_numbers
         self.stitch_params = [1,1,1,1]
+        
+        if manually_correct_I0 is not None:
+            self.I0 = manually_correct_I0
+        
+        if manually_correct_transmission is not None:
+            self.transmission = manually_correct_transmission
+            
         # correct for background
         if background is None:
             pass
@@ -88,6 +97,14 @@ class Saxs_Sample:
             # print(self.uni.columns)
             self.uni['I'] = self.uni['I'] / self.thickness
             self.uni['dI'] = self.uni['dI'] / self.thickness
+
+        if manually_correct_transmission is not None:
+            self.uni['I'] = self.uni['I'] / self.transmission
+            self.uni['dI'] = self.uni['dI'] / self.transmission
+            
+        if manually_correct_I0 is not None:
+            self.uni['I'] = self.uni['I'] * 10**6 / self.I0
+            self.uni['dI'] = self.uni['dI'] * 10**6 / self.I0
 
         if model_infile is None:
             pass
@@ -325,10 +342,6 @@ class Saxs_Sample:
         del lines[
             -10:]  # delete the footers (note: this should be changed in the future so that it changes to exclude everything below "#Header"
         lines2 = []
-        # lines = [line.replace('\n', '') for line in lines]
-        # lines = [line.replace('\"', '') for line in lines]
-        # lines = [line.split(',') for line in lines]
-        # lines = [list(filter(('').__ne__), line) for line in lines]
         for line in lines:
             line2 = line.replace('\n', '')  # replace all \n with empty strings
             line2 = line2.replace('\"', '')  # replace all quotation marks with empty strings
